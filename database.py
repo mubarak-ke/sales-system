@@ -49,6 +49,17 @@ def register_users(values):
       cur.execute(users,values)
       conn.commit() 
 
+def check_email(email):
+      query='select exists(select email from users where email= %s )'
+      cur.execute(query,(email,))
+      exist=cur.fetchone()[0]
+      return exist
+def check_logins(email,password):
+      query="select * from users where email=%s and password=%s;"
+      cur.execute(query,(email,password,))
+      check=cur.fetchone()[0]
+      return check
+
 # product_value=("potato",600,1000,10) 
 # insert_products(product_value)
 # get_data('sales')
@@ -64,12 +75,23 @@ sale_value=(2,500)
 insert_sales(sale_value)
 get_data('sales')  
 
+# function to display every sale
 def sales_product():
       display='select pr.name,sum(pr.selling_price*sl.quantity)\
           as res from products as pr join sales as sl on pr.id=sl.pid group by pr.name;'
       cur.execute(display)
       data=cur.fetchall()
       return data
+
+# displaye sales by name of e prducts
+def product_name(b):
+      pr_name='select p.name from products as p where id=%s;'
+      cur.execute(pr_name,(b,))
+      d=cur.fetchone()
+      return d
+
+
+# display profit product
 def profit_product():
       display ='select p.name,sum(((selling_price-buying_price)*quantity))\
           as profit from products as p join sales as s on s.pid=p.id group by p.name;' 
@@ -91,3 +113,35 @@ def profit_day():
      cur.execute(display)
      data=cur.fetchall()
      return data
+
+
+#getting sales per day
+def sales_per_day():
+      display_total_sales='select date (created_at) as day ,sum((selling_price )*quantity) as sales from products as p \
+            join sales as s on s.pid=p.id where date (created_at)=current_date group by day;'
+      cur.execute(display_total_sales)
+      data=cur.fetchall()
+      return data
+#getting total sales  of all time
+def  total_sales():
+      display_total_sales="Select sum(selling_price*quantity) as Total_Sales From products as p \
+      join sales as s on s.pid=pid;"
+      cur.execute(display_total_sales)
+      data=cur.fetchall()
+      return data
+#display profit of today
+def  todays_profit():
+    display_todays_profit="select to_char(CURRENT_DATE,'YYYY/MM/DD') as Date_only,round(sum((selling_price-buying_price)*quantity),2)as profit from sales as s\
+      join products as p on s.pid=p.id group by date_only order by date_only limit 1;"
+    cur.execute(display_todays_profit)
+    data=cur.fetchall()
+    return data
+# display total profit  of all time
+def total_profit():
+     display_total_profit = "select round (sum(((selling_price-buying_price)*quantity)),2) as Total_Profits from products as p join sales as s on s.pid=p.id;"
+     cur.execute(display_total_profit)
+     data=cur.fetchall()
+     return data
+
+# #deleting a product
+# def delete_product(product_id,cur, )

@@ -1,12 +1,13 @@
-from flask import Flask,render_template,request,redirect,url_for,flash
-from database import get_data,insert_products,insert_sales,sales_product,profit_product,sales_day,profit_day,register_users
+from flask import Flask,render_template,request,redirect,url_for,flash,session
+from database import get_data,insert_products,insert_sales,sales_product,profit_product,sales_day,profit_day,\
+    register_users,check_email,check_logins,sales_per_day,total_sales, todays_profit,total_profit,product_name
 
 # Create a flask instance.
 app = Flask(__name__)
 app.secret_key="kssjdnvdvd"
 @app.route('/')
 def hello():
-    return render_template('index.html')
+    return render_template('home.html')
 
 @app.route("/home")
 def home():
@@ -14,8 +15,11 @@ def home():
 
 @app.route('/product')
 def product():
-    data=get_data("products") # Get the products table data.
-    return  render_template("product.html",prod=data)
+     if 'email' not in session:
+        flash("login  to access this page ")
+        return redirect(url_for("login"))
+     data=get_data("products") # Get the products table data.
+     return  render_template("product.html",prod=data)
 
 #route to add product
 @app.route('/add_product',methods=['post'])
@@ -30,18 +34,40 @@ def add_product():
 
 @app.route('/sales')
 def sales():
-    data=get_data("sales")
-    products=get_data("products")
-    return render_template("sales.html",sal=data,prods=products)
+     if 'email' not in session:
+        flash("login  to access this page ")
+        return redirect(url_for("login"))
+     
+     data=get_data("sales")
+     products=get_data("products")
+     return render_template("sales.html",sal=data,prods=products)
+
+
 @app.route('/make_sale', methods=['post'])
 def make_sale():
     pid=request.form['product_id']
     quantity=request.form['quantity']
     val=(pid,quantity)
     insert_sales(val)
+    data=product_name(pid) # get the name of the product using its id
+    for i in data:
+        product=i
+        flash(f'sales made successfully for {quantity} {product}',"success") 
     return redirect(url_for('sales'))
 @app.route('/dashboard')
 def dashboard():
+    if 'email'not in session:
+        flash("login to access this page")
+        return redirect(url_for("login"))
+    spp=sales_per_day()
+    ts=total_sales()
+    tp= todays_profit()
+    total=total_profit()
+    print(total)
+
+
+    
+    
     sp=sales_product()
     pp=profit_product()
     sd=sales_day()
@@ -71,7 +97,7 @@ def dashboard():
          names.append(str(i[0]))
          values.append(float(i[1]))
  
-    return render_template( 'dashboard.html',names=names,val=values,pr=pr,name=name,sale=sl,day=day,days=days,profit=pl)
+    return render_template( 'dashboard.html',names=names,val=values,pr=pr,name=name,sale=sl,day=day,days=days,profit=pl,spp=spp,ts=ts,tp=tp,total=total)
 
 @app.route('/register',methods=['POST','GET'])
 def register():
@@ -80,15 +106,33 @@ def register():
         email=request.form['email']
         password=request.form['password']
         val=(f_name,email,password)
-        register_users(val)
-        flash("you were successfully logged in")
-    return render_template( 'reg.html' )
+        if check_email(email):
+            
+            flash("email already exist use a different email ,","success")
+        else:   
+             register_users(val)
+             flash("you were successfully logged in danger")
+    return render_template( 'register.html' )
 
 
 
-# @app.route('/login',method=['post','get'])
-# def login():
-#     return render_template('login.html')
+@app.route('/login',methods=['POST','GET'])
+def login():
+    if request.method == 'POST':
+        email=request.form['email']
+        password=request.form['password']
+        if check_logins(email,password):
+            session['email'] = email
+            flash("access granted","success")
+            return redirect(url_for('home'))
+        else:
+            flash("wrong password or email try again","danger")
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.pop('email',None) # remove the email from
+    return redirect(url_for('home'))
 
 
 app.run(debug=True)
